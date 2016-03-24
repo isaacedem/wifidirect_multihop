@@ -46,10 +46,12 @@ import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Array;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.util.ArrayList;
 
 /**
  * A fragment that manages a particular peer and allows interaction with device
@@ -162,9 +164,10 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         // After the group negotiation, we assign the group owner as the file
         // server. The file server is single threaded, single connection server
         // socket.
+        String[] temp = {"Bonjour", "Message"};
         if (info.groupFormed && info.isGroupOwner) {
             new FileServerAsyncTask(getActivity(), mContentView.findViewById(R.id.status_text))
-                    .execute();
+                    .execute(temp);
         } else if (info.groupFormed) {
             // The other device acts as the client.
             // Send bonjour message to GO
@@ -190,9 +193,12 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
             });
             thread.start();
 
+            ArrayList<String> params = new ArrayList<String>();
+            params.add("Bonjour");
+
             // open server port for client as well
             new FileServerAsyncTask(getActivity(), mContentView.findViewById(R.id.status_text))
-                    .execute();
+                    .execute(temp);
 
 
             // In this case, we enable the
@@ -243,7 +249,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
      * A simple server socket that accepts connection and writes some data on
      * the stream.
      */
-    public static class FileServerAsyncTask extends AsyncTask<Void, Void, String> {
+    public static class FileServerAsyncTask extends AsyncTask<String, Void, ArrayList<String>> {
 
         private Context context;
         private TextView statusText;
@@ -258,7 +264,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         }
 
         @Override
-        protected String doInBackground(Void... params) {
+        protected ArrayList<String> doInBackground(String... passing) {
             try {
                 ServerSocket serverSocket = new ServerSocket(8988);
                 Log.d(WiFiDirectActivity.TAG, "Server: Socket opened");
@@ -279,14 +285,23 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
 //                copyFile(inputstream, new FileOutputStream(f));
 //                serverSocket.close();
 //                return f.getAbsolutePath();
-                ObjectInputStream objectInputStream = new ObjectInputStream(client.getInputStream());
-                Object object = objectInputStream.readObject();
-                serverSocket.close();
-                Log.d(WiFiDirectActivity.TAG, "Client IP address: ");
-                if (object.getClass().equals(String.class) && ((String) object).equals("WASSUP")) {
-                    Log.d(WiFiDirectActivity.TAG, "Client IP address: "+client.getInetAddress());
+
+//                ArrayList<String> passed = passing[0];
+                if(passing[0].equals("Bonjour")) {
+                    Log.i("DeveiceDetailFragment", "Inside Bonjour");
+                    ObjectInputStream objectInputStream = new ObjectInputStream(client.getInputStream());
+                    Object object = objectInputStream.readObject();
+                    serverSocket.close();
+                    Log.d(WiFiDirectActivity.TAG, "Client IP address: ");
+                    if (object.getClass().equals(String.class) && ((String) object).equals("WASSUP")) {
+                        Log.d(WiFiDirectActivity.TAG, "Client IP address: " + client.getInetAddress());
+                    }
+                    ArrayList<String> results = new ArrayList<String>();
+                    results.add(client.getInetAddress().toString());
+                    return results;
                 }
-                return client.getInetAddress().toString();
+
+                return null;
             } catch (Exception e) {
 
                 Log.e(WiFiDirectActivity.TAG, e.getMessage());
@@ -299,7 +314,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
          * @see android.os.AsyncTask#onPostExecute(java.lang.Object)
          */
         @Override
-        protected void onPostExecute(String result) {
+        protected void onPostExecute(final ArrayList<String> result) {
             if (result != null) {
 //                statusText.setText("File copied - " + result);
 //                Intent intent = new Intent();
@@ -307,7 +322,50 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
 //                intent.setDataAndType(Uri.parse("file://" + result), "image/*");
 //                context.startActivity(intent);
                 Log.d(WiFiDirectActivity.TAG, "Ip Address is " + result);
-                Toast.makeText(context, "result", Toast.LENGTH_SHORT).show();
+                if (result.get(0).toString().equals("/192.168.49.1")){
+                    Thread thread = new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                Log.d(WiFiDirectActivity.TAG, "Inside message thread: "+ result.get(0).toString());
+                                Socket socket = new Socket();
+//                        socket.setReuseAddress(true);
+                                socket.connect((new InetSocketAddress("192.168.49.27", 8988)), 5000);
+                                OutputStream os = socket.getOutputStream();
+                                ObjectOutputStream oos = new ObjectOutputStream(os);
+                                oos.writeObject(new String("Hello World"));
+                                oos.close();
+                                os.close();
+                                socket.close();
+                            } catch (Exception e) {
+                                Log.d(WiFiDirectActivity.TAG, "Client hello world message: " + e);
+                            }
+                        }
+                    });
+                    thread.start();
+                }
+                Thread thread = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            Log.d(WiFiDirectActivity.TAG, "Inside message thread: ");
+                            Socket socket = new Socket();
+//                        socket.setReuseAddress(true);
+                            socket.connect((new InetSocketAddress("192.168.49.181", 8988)), 5000);
+                            OutputStream os = socket.getOutputStream();
+                            ObjectOutputStream oos = new ObjectOutputStream(os);
+                            oos.writeObject(new String("Hello World"));
+                            oos.close();
+                            os.close();
+                            socket.close();
+                        } catch (Exception e) {
+                            Log.d(WiFiDirectActivity.TAG, "Client hello world message: " + e);
+                        }
+                    }
+                });
+                thread.start();
+                Toast.makeText(context, result.get(0).toString(), Toast.LENGTH_SHORT).show();
+
             }
 
         }
