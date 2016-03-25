@@ -55,7 +55,7 @@ import java.util.ArrayList;
 
 /**
  * A fragment that manages a particular peer and allows interaction with device
- * i.e. setting up network connection and transferring data.
+ * i.e. setting up network connection and transferring data. Test
  */
 public class DeviceDetailFragment extends Fragment implements ConnectionInfoListener {
 
