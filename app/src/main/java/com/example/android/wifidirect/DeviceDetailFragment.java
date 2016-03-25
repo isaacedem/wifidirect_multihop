@@ -157,7 +157,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         TextView view = (TextView) mContentView.findViewById(R.id.group_owner);
         view.setText(getResources().getString(R.string.group_owner_text)
                 + ((info.isGroupOwner == true) ? getResources().getString(R.string.yes)
-                        : getResources().getString(R.string.no)));
+                : getResources().getString(R.string.no)));
 
         // InetAddress from WifiP2pInfo struct.
         view = (TextView) mContentView.findViewById(R.id.device_info);
@@ -218,7 +218,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
 
     /**
      * Updates the UI with device data
-     * 
+     *
      * @param device the device to be displayed
      */
     public void showDetails(WifiP2pDevice device) {
@@ -291,17 +291,17 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
 
 //                ArrayList<String> passed = passing[0];
 
-                    Log.i("DeviceDetailFragment", "Inside Bonjour");
-                    ObjectInputStream objectInputStream = new ObjectInputStream(client.getInputStream());
-                    Object object = objectInputStream.readObject();
-                    serverSocket.close();
+                Log.i("DeviceDetailFragment", "Inside Bonjour");
+                ObjectInputStream objectInputStream = new ObjectInputStream(client.getInputStream());
+                Object object = objectInputStream.readObject();
+                serverSocket.close();
 
-                    Message message = (Message) object;
+                Message message = (Message) object;
 
-                    processMessage(message, client);
-                    ArrayList<String> results = new ArrayList<String>();
-                    results.add(client.getInetAddress().toString());
-                    return results;
+                processMessage(message, client);
+                ArrayList<String> results = new ArrayList<String>();
+                results.add(client.getInetAddress().toString());
+                return results;
 
             } catch (Exception e) {
 
@@ -311,62 +311,72 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         }
 
 
-        private void processMessage(Message message, Socket client){
-            if(message.getmMessageType().equals("Bonjour") && info.isGroupOwner){
+        private void processMessage(Message message, Socket client) {
+            PeerList peerList = PeerList.getInstance();
+            if (message.getmMessageType().equals("Bonjour") && info.isGroupOwner) {
                 Log.d(WiFiDirectActivity.TAG, "Client IP address: " + client.getInetAddress());
                 Log.d(WiFiDirectActivity.TAG, "Client Name?: " + message.getmSenderDeviceName());
                 String device = message.getmSenderDeviceName();
                 String ipAddress = client.getInetAddress().toString().substring(1); // remove /
-                PeerList peerList = PeerList.getInstance();
                 peerList.addDevice(device, ipAddress);
                 sendUpdatedPeerList();
                 //save IP to GO Global IP LIST
                 //send client updated list
             }
-            if(message.getmMessageType().equals("PeerList")){
-                Log.d(WiFiDirectActivity.TAG, "Peerlist received" );
-                PeerList receivedPeerList = (PeerList) message.getmMesssageData();
-                HashMap<String, String> hm = receivedPeerList.getDevices();
-                Log.d("PeerLIs phone name", receivedPeerList.getMyPhoneName()+"");
-                Log.d("PeerLIst Data", hm.size()+"");
+            if (message.getmMessageType().equals("PeerList")) {
+                Log.d(WiFiDirectActivity.TAG, "Peerlist received");
+                HashMap<String, String> receivedPeerList = (HashMap) message.getmMesssageData();
+//                HashMap<String, String> hm = receivedPeerList.getDevices();
+//                Log.d("PeerLIs phone name", receivedPeerList.getMyPhoneName()+"");
+                Log.d("PeerLIst Data", receivedPeerList.size() + "");
+                peerList.updateAllDevices(receivedPeerList);
+                Log.d("Client Peerlist", peerList.getDevices().keySet().toString());
                 //save IP to GO Global IP LIST
                 //send client updated list
             }
 
         }
 
-        private void sendUpdatedPeerList() {
+        protected static void sendUpdatedPeerList() {
             PeerList peerList = PeerList.getInstance();
+            if (peerList.getDevices().size() > 0) {
+                // make sure GO is in peer list for easy access by anyone
+                peerList.addDevice(peerList.getMyPhoneName(), info.groupOwnerAddress.toString());
 
-            final HashMap<String, String> devices = peerList.getDevices();
-            Log.d("DeviceDetailFrag", "Sending peerlist size: "+peerList.getDevices().size());
-            for(String device : devices.keySet()) {
-                final String ipAddress = devices.get(device);
-                final Message message = new Message("PeerList", peerList, info.groupOwnerAddress.toString());
-                Log.d(WiFiDirectActivity.TAG, "Right before thread: ");
-                Thread thread = new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            Log.d(WiFiDirectActivity.TAG, "Sending peerlist thread: "+devices.keySet().toString());
-                            Socket socket = new Socket();
+                final HashMap<String, String> devices = peerList.getDevices();
+                final HashMap<String, String> updatedPeers = new HashMap<>();
+                updatedPeers.putAll(peerList.getDevices());
+                Log.d("DeviceDetailFrag", "Updated peers size: " + updatedPeers.size());
+                Log.d("DeviceDetailFrag", "Sending peerlist size: " + peerList.getDevices().size());
+                for (String device : devices.keySet()) {
+                    final String ipAddress = devices.get(device);
+                    final Message message = new Message("PeerList", updatedPeers, info.groupOwnerAddress.toString());
+                    Log.d(WiFiDirectActivity.TAG, "Right before thread: ");
+                    Thread thread = new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                Log.d(WiFiDirectActivity.TAG, "Sending peerlist thread: " + devices.keySet().toString());
+                                Socket socket = new Socket();
 //                        socket.setReuseAddress(true);
-                            Log.d(WiFiDirectActivity.TAG, "Sending peerlist thread IP Address: "+ipAddress);
-                            socket.connect((new InetSocketAddress(ipAddress, 8988)), 5000);
-                            OutputStream os = socket.getOutputStream();
-                            ObjectOutputStream oos = new ObjectOutputStream(os);
-                            oos.writeObject(message);
-                            oos.close();
-                            os.close();
-                            socket.close();
-                        } catch (Exception e) {
-                            Log.d(WiFiDirectActivity.TAG, "Client peerlist message: " + e);
+                                Log.d(WiFiDirectActivity.TAG, "Sending peerlist thread IP Address: " + ipAddress);
+                                socket.connect((new InetSocketAddress(ipAddress, 8988)), 5000);
+                                OutputStream os = socket.getOutputStream();
+                                ObjectOutputStream oos = new ObjectOutputStream(os);
+                                oos.writeObject(message);
+                                oos.close();
+                                os.close();
+                                socket.close();
+                            } catch (Exception e) {
+                                Log.d(WiFiDirectActivity.TAG, "Client peerlist message: " + e);
+                            }
                         }
-                    }
-                });
-                thread.start();
+                    });
+                    thread.start();
+                }
             }
         }
+
         /*
          * (non-Javadoc)
          * @see android.os.AsyncTask#onPostExecute(java.lang.Object)
@@ -380,12 +390,12 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
 //                intent.setDataAndType(Uri.parse("file://" + result), "image/*");
 //                context.startActivity(intent);
                 Log.d(WiFiDirectActivity.TAG, "Ip Address is " + result);
-                if (result.get(0).toString().equals("/192.168.49.1")){
+                if (result.get(0).toString().equals("/192.168.49.1")) {
                     Thread thread = new Thread(new Runnable() {
                         @Override
                         public void run() {
                             try {
-                                Log.d(WiFiDirectActivity.TAG, "Inside message thread: "+ result.get(0).toString());
+                                Log.d(WiFiDirectActivity.TAG, "Inside message thread: " + result.get(0).toString());
                                 Socket socket = new Socket();
 //                        socket.setReuseAddress(true);
                                 socket.connect((new InetSocketAddress("192.168.49.27", 8988)), 5000);
@@ -454,7 +464,6 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         }
         return true;
     }
-
 
 
 }

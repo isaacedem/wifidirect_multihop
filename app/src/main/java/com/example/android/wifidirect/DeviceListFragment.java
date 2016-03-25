@@ -35,7 +35,10 @@ import android.widget.TextView;
 
 import java.security.Permission;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 /**
  * A ListFragment that displays available peers on discovery and requests the
@@ -109,7 +112,7 @@ public class DeviceListFragment extends ListFragment implements PeerListListener
          * @param objects
          */
         public WiFiPeerListAdapter(Context context, int textViewResourceId,
-                List<WifiP2pDevice> objects) {
+                                   List<WifiP2pDevice> objects) {
             super(context, textViewResourceId, objects);
             items = objects;
 
@@ -142,7 +145,7 @@ public class DeviceListFragment extends ListFragment implements PeerListListener
 
     /**
      * Update UI for this device.
-     * 
+     *
      * @param device WifiP2pDevice object
      */
 
@@ -169,15 +172,29 @@ public class DeviceListFragment extends ListFragment implements PeerListListener
         peers.clear();
         peers.addAll(peerList.getDeviceList());
 
-        for (String device : globalPeerList.getDevices().keySet()){
-            boolean found = false;
-            for (WifiP2pDevice peer : peers) {
-                if (device.equals(peer.deviceName))
-                    found = true;
+        if (this.device.isGroupOwner()) {
+            Log.d("DeviceListFragment", "onPeersAvailable peerlist devices " + globalPeerList.getDevices().size());
+
+
+            Iterator<String> itr = globalPeerList.getDevices().keySet().iterator();
+            while (itr.hasNext()) {
+                String device = itr.next();
+                boolean found = false;
+                for (WifiP2pDevice peer : peers) {
+                    if (device.equals(peer.deviceName))
+                        found = true;
+                }
+                if (!found)
+                    itr.remove();
             }
-            if (!found)
-                globalPeerList.removeDevice(device);
+            Log.d("DeviceListFragment", "onPeersAvailable remaining peerlist devices " + globalPeerList.getDevices().size());
+            // first time should be 0 so only runs when device leaves
+            if (globalPeerList.getDevices().size() > 0) {
+                DeviceDetailFragment.FileServerAsyncTask.sendUpdatedPeerList();
+            }
         }
+
+
         for (WifiP2pDevice peer : peers) {
             Log.d(WiFiDirectActivity.TAG, peer.deviceName + " " + peer.isGroupOwner());
         }
@@ -195,7 +212,7 @@ public class DeviceListFragment extends ListFragment implements PeerListListener
     }
 
     /**
-     * 
+     *
      */
     public void onInitiateDiscovery() {
         if (progressDialog != null && progressDialog.isShowing()) {
@@ -206,7 +223,7 @@ public class DeviceListFragment extends ListFragment implements PeerListListener
 
                     @Override
                     public void onCancel(DialogInterface dialog) {
-                        
+
                     }
                 });
     }

@@ -63,7 +63,9 @@ public class PeerList implements Serializable{
     }
 
     public void updateAllDevices(HashMap<String, String> devices) {
-        this.deviceIPMap = devices;
+
+        deviceIPMap = new HashMap<>();
+        deviceIPMap.putAll(devices);
     }
 
 }
