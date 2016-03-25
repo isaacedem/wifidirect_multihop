@@ -33,6 +33,7 @@ import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 
+import java.security.Permission;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -79,7 +80,7 @@ public class DeviceListFragment extends ListFragment implements PeerListListener
             case WifiP2pDevice.FAILED:
                 return "Failed";
             case WifiP2pDevice.UNAVAILABLE:
-                return "Unavailable";
+                return "z";
             default:
                 return "Unknown";
 
@@ -144,24 +145,41 @@ public class DeviceListFragment extends ListFragment implements PeerListListener
      * 
      * @param device WifiP2pDevice object
      */
+
     public void updateThisDevice(WifiP2pDevice device) {
         this.device = device;
         TextView view = (TextView) mContentView.findViewById(R.id.my_name);
         view.setText(device.deviceName);
+
+        PeerList peerList = PeerList.getInstance();
+        peerList.setMyPhoneName(device.deviceName);
+
+
         view = (TextView) mContentView.findViewById(R.id.my_status);
         view.setText(getDeviceStatus(device.status));
     }
 
     @Override
     public void onPeersAvailable(WifiP2pDeviceList peerList) {
+        PeerList globalPeerList = PeerList.getInstance();
+
         if (progressDialog != null && progressDialog.isShowing()) {
             progressDialog.dismiss();
         }
         peers.clear();
         peers.addAll(peerList.getDeviceList());
+
+        for (String device : globalPeerList.getDevices().keySet()){
+            boolean found = false;
+            for (WifiP2pDevice peer : peers) {
+                if (device.equals(peer.deviceName))
+                    found = true;
+            }
+            if (!found)
+                globalPeerList.removeDevice(device);
+        }
         for (WifiP2pDevice peer : peers) {
             Log.d(WiFiDirectActivity.TAG, peer.deviceName + " " + peer.isGroupOwner());
-
         }
         ((WiFiPeerListAdapter) getListAdapter()).notifyDataSetChanged();
         if (peers.size() == 0) {

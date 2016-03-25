@@ -52,22 +52,24 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 /**
  * A fragment that manages a particular peer and allows interaction with device
- * i.e. setting up network connection and transferring data. Test
+ * i.e. setting up network connection and transferring data.
  */
 public class DeviceDetailFragment extends Fragment implements ConnectionInfoListener {
 
     protected static final int CHOOSE_FILE_RESULT_CODE = 20;
     private View mContentView = null;
     private WifiP2pDevice device;
-    private WifiP2pInfo info;
+    protected static WifiP2pInfo info;
     ProgressDialog progressDialog = null;
 
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
+
     }
 
     @Override
@@ -164,42 +166,16 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         // After the group negotiation, we assign the group owner as the file
         // server. The file server is single threaded, single connection server
         // socket.
-        String[] temp = {"Bonjour", "Message"};
+
+        //open up socket for both Group Owner and Group Member
+        new FileServerAsyncTask(getActivity(), mContentView.findViewById(R.id.status_text))
+                .execute();
         if (info.groupFormed && info.isGroupOwner) {
-            new FileServerAsyncTask(getActivity(), mContentView.findViewById(R.id.status_text))
-                    .execute(temp);
+
         } else if (info.groupFormed) {
             // The other device acts as the client.
             // Send bonjour message to GO
-            Log.d(WiFiDirectActivity.TAG, "Right before thread: ");
-            Thread thread = new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        Log.d(WiFiDirectActivity.TAG, "Inside thread: ");
-                        Socket socket = new Socket();
-//                        socket.setReuseAddress(true);
-                        socket.connect((new InetSocketAddress(info.groupOwnerAddress.getHostAddress(), 8988)), 5000);
-                        OutputStream os = socket.getOutputStream();
-                        ObjectOutputStream oos = new ObjectOutputStream(os);
-                        oos.writeObject(new String("WASSUP"));
-                        oos.close();
-                        os.close();
-                        socket.close();
-                    } catch (Exception e) {
-                        Log.d(WiFiDirectActivity.TAG, "Client bonjour message: " + e);
-                    }
-                }
-            });
-            thread.start();
-
-            ArrayList<String> params = new ArrayList<String>();
-            params.add("Bonjour");
-
-            // open server port for client as well
-            new FileServerAsyncTask(getActivity(), mContentView.findViewById(R.id.status_text))
-                    .execute(temp);
-
+            sendBonjourMessage();
 
             // In this case, we enable the
             // get file button.
@@ -211,6 +187,33 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
 
         // hide the connect button
         mContentView.findViewById(R.id.btn_connect).setVisibility(View.GONE);
+    }
+
+    private void sendBonjourMessage() {
+        PeerList peerList = PeerList.getInstance();
+        final Message message = new Message("Bonjour", new String("WASSUP"), peerList.getMyPhoneName());
+
+        Log.d(WiFiDirectActivity.TAG, "Right before thread send bonjour: " + peerList.getMyPhoneName());
+        Thread thread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Log.d(WiFiDirectActivity.TAG, "Inside thread: ");
+                    Socket socket = new Socket();
+//                        socket.setReuseAddress(true);
+                    socket.connect((new InetSocketAddress(info.groupOwnerAddress.getHostAddress(), 8988)), 5000);
+                    OutputStream os = socket.getOutputStream();
+                    ObjectOutputStream oos = new ObjectOutputStream(os);
+                    oos.writeObject(message);
+                    oos.close();
+                    os.close();
+                    socket.close();
+                } catch (Exception e) {
+                    Log.d(WiFiDirectActivity.TAG, "Client bonjour message: " + e);
+                }
+            }
+        });
+        thread.start();
     }
 
     /**
@@ -249,7 +252,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
      * A simple server socket that accepts connection and writes some data on
      * the stream.
      */
-    public static class FileServerAsyncTask extends AsyncTask<String, Void, ArrayList<String>> {
+    public static class FileServerAsyncTask extends AsyncTask<Void, Void, ArrayList<String>> {
 
         private Context context;
         private TextView statusText;
@@ -264,7 +267,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         }
 
         @Override
-        protected ArrayList<String> doInBackground(String... passing) {
+        protected ArrayList<String> doInBackground(Void... params) {
             try {
                 ServerSocket serverSocket = new ServerSocket(8988);
                 Log.d(WiFiDirectActivity.TAG, "Server: Socket opened");
@@ -287,21 +290,19 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
 //                return f.getAbsolutePath();
 
 //                ArrayList<String> passed = passing[0];
-                if(passing[0].equals("Bonjour")) {
-                    Log.i("DeveiceDetailFragment", "Inside Bonjour");
+
+                    Log.i("DeviceDetailFragment", "Inside Bonjour");
                     ObjectInputStream objectInputStream = new ObjectInputStream(client.getInputStream());
                     Object object = objectInputStream.readObject();
                     serverSocket.close();
-                    Log.d(WiFiDirectActivity.TAG, "Client IP address: ");
-                    if (object.getClass().equals(String.class) && ((String) object).equals("WASSUP")) {
-                        Log.d(WiFiDirectActivity.TAG, "Client IP address: " + client.getInetAddress());
-                    }
+
+                    Message message = (Message) object;
+
+                    processMessage(message, client);
                     ArrayList<String> results = new ArrayList<String>();
                     results.add(client.getInetAddress().toString());
                     return results;
-                }
 
-                return null;
             } catch (Exception e) {
 
                 Log.e(WiFiDirectActivity.TAG, e.getMessage());
@@ -309,6 +310,63 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
             }
         }
 
+
+        private void processMessage(Message message, Socket client){
+            if(message.getmMessageType().equals("Bonjour") && info.isGroupOwner){
+                Log.d(WiFiDirectActivity.TAG, "Client IP address: " + client.getInetAddress());
+                Log.d(WiFiDirectActivity.TAG, "Client Name?: " + message.getmSenderDeviceName());
+                String device = message.getmSenderDeviceName();
+                String ipAddress = client.getInetAddress().toString().substring(1); // remove /
+                PeerList peerList = PeerList.getInstance();
+                peerList.addDevice(device, ipAddress);
+                sendUpdatedPeerList();
+                //save IP to GO Global IP LIST
+                //send client updated list
+            }
+            if(message.getmMessageType().equals("PeerList")){
+                Log.d(WiFiDirectActivity.TAG, "Peerlist received" );
+                PeerList receivedPeerList = (PeerList) message.getmMesssageData();
+                HashMap<String, String> hm = receivedPeerList.getDevices();
+                Log.d("PeerLIs phone name", receivedPeerList.getMyPhoneName()+"");
+                Log.d("PeerLIst Data", hm.size()+"");
+                //save IP to GO Global IP LIST
+                //send client updated list
+            }
+
+        }
+
+        private void sendUpdatedPeerList() {
+            PeerList peerList = PeerList.getInstance();
+
+            final HashMap<String, String> devices = peerList.getDevices();
+            Log.d("DeviceDetailFrag", "Sending peerlist size: "+peerList.getDevices().size());
+            for(String device : devices.keySet()) {
+                final String ipAddress = devices.get(device);
+                final Message message = new Message("PeerList", peerList, info.groupOwnerAddress.toString());
+                Log.d(WiFiDirectActivity.TAG, "Right before thread: ");
+                Thread thread = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            Log.d(WiFiDirectActivity.TAG, "Sending peerlist thread: "+devices.keySet().toString());
+                            Socket socket = new Socket();
+//                        socket.setReuseAddress(true);
+                            Log.d(WiFiDirectActivity.TAG, "Sending peerlist thread IP Address: "+ipAddress);
+                            socket.connect((new InetSocketAddress(ipAddress, 8988)), 5000);
+                            OutputStream os = socket.getOutputStream();
+                            ObjectOutputStream oos = new ObjectOutputStream(os);
+                            oos.writeObject(message);
+                            oos.close();
+                            os.close();
+                            socket.close();
+                        } catch (Exception e) {
+                            Log.d(WiFiDirectActivity.TAG, "Client peerlist message: " + e);
+                        }
+                    }
+                });
+                thread.start();
+            }
+        }
         /*
          * (non-Javadoc)
          * @see android.os.AsyncTask#onPostExecute(java.lang.Object)
@@ -396,5 +454,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         }
         return true;
     }
+
+
 
 }
