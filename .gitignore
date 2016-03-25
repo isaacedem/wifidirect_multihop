@@ -32,3 +32,6 @@ proguard/
 captures/
 
 local.properties
+project.properties
+*.properties
+project.properties
