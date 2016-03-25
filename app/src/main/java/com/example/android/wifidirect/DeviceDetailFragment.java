@@ -365,7 +365,6 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
                 });
                 thread.start();
                 Toast.makeText(context, result.get(0).toString(), Toast.LENGTH_SHORT).show();
-
             }
 
         }
