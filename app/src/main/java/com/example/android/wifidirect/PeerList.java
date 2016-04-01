@@ -25,6 +25,8 @@ public class PeerList implements Serializable{
 
     private String myPhoneName;
 
+    private static String GOIPAddress;
+
     private static PeerList peerList = null;
 
     private PeerList(){};
@@ -41,7 +43,10 @@ public class PeerList implements Serializable{
 //        deviceMacMap = new HashMap<>();
 //        macIPMap = new HashMap<>();
           deviceIPMap = new HashMap<String, String>();
+        GOIPAddress = "192.168.49.1";
     }
+
+    public String getGOIPAddress(){return GOIPAddress;}
 
     public void addDevice(String device, String ipAddress){
         Log.i("PeerList", "addDevice " + device + " " + ipAddress);
@@ -58,8 +63,8 @@ public class PeerList implements Serializable{
             deviceIPMap.remove(device);
     }
 
-    public void getDeviceIP(String device) {
-        String ipAddress = this.deviceIPMap.get(device);
+    public String getDeviceIP(String device) {
+        return  this.deviceIPMap.get(device);
     }
 
     public void updateAllDevices(HashMap<String, String> devices) {

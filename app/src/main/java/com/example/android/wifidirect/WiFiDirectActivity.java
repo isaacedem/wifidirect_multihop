@@ -34,9 +34,16 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.Toast;
 
 import com.example.android.wifidirect.DeviceListFragment.DeviceActionListener;
+
+import java.io.ObjectOutputStream;
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
+import java.net.Socket;
 
 /**
  * An activity that uses WiFi Direct APIs to discover and connect with available
@@ -44,6 +51,16 @@ import com.example.android.wifidirect.DeviceListFragment.DeviceActionListener;
  * using interfaces to notify the application of operation success or failure.
  * The application should also register a BroadcastReceiver for notification of
  * WiFi state related events.
+ *
+ *
+  android.os.Handler handler = new android.os.Handler();
+ handler.postDelayed(new Runnable() {
+ public void run() {
+ Log.i("onResume", "code ran");
+ upateView();
+ upateView();
+ }
+ }, 2000);
  */
 public class WiFiDirectActivity extends Activity implements ChannelListener, DeviceActionListener {
 
@@ -55,6 +72,9 @@ public class WiFiDirectActivity extends Activity implements ChannelListener, Dev
     private final IntentFilter intentFilter = new IntentFilter();
     private Channel channel;
     private BroadcastReceiver receiver = null;
+
+    private EditText receiverView;
+    private Button sendBtn;
 
     /**
      * @param isWifiP2pEnabled the isWifiP2pEnabled to set
@@ -77,6 +97,71 @@ public class WiFiDirectActivity extends Activity implements ChannelListener, Dev
 
         manager = (WifiP2pManager) getSystemService(Context.WIFI_P2P_SERVICE);
         channel = manager.initialize(this, getMainLooper(), null);
+
+        receiverView = (EditText) findViewById(R.id.receiverView);
+        sendBtn = (Button) findViewById(R.id.sendMessageBtn);
+        sendBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                sendMessage();
+            }
+        });
+    }
+
+    public void sendMessage(){
+        Log.i("Inside sendMessage", "Send message");
+        final String recevierID = receiverView.getText().toString();
+
+        final PeerList peerList = PeerList.getInstance();
+        final Message message = new Message("Text", new String("jfkajglkajgkla"), peerList.getMyPhoneName());
+
+        final String receiverIP = peerList.getDeviceIP(recevierID);
+        if(receiverIP == null ){
+            //todo later have to check for multi-hop
+        } else {
+            Log.i("Inside sendMessage", "Send message");
+            Thread thread = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        Socket socket = new Socket();
+                        socket.connect((new InetSocketAddress(receiverIP, 8988)), 5000);
+                        OutputStream os = socket.getOutputStream();
+                        ObjectOutputStream oos = new ObjectOutputStream(os);
+                        oos.writeObject(message);
+                        oos.close();
+                        os.close();
+                        socket.close();
+                    } catch (Exception e) {
+                        Log.d(WiFiDirectActivity.TAG, "Could not send message to Receiver at: " + receiverIP);
+                        //Message failed so send Group Owner saying it is not in the group no more
+                        final Message messageToGO = new Message("RemovePeer", new String(recevierID), peerList.getMyPhoneName());
+                        Thread thread = new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    Socket socket = new Socket();
+                                    socket.connect((new InetSocketAddress(peerList.getGOIPAddress(), 8988)), 5000);
+                                    OutputStream os = socket.getOutputStream();
+                                    ObjectOutputStream oos = new ObjectOutputStream(os);
+                                    oos.writeObject(messageToGO);
+                                    oos.close();
+                                    os.close();
+                                    socket.close();
+                                } catch (Exception e) {
+                                    Log.d(WiFiDirectActivity.TAG, "Client peerlist message: " + e);
+                                    //Message failed so send Group Owner saying it is not in the group no more
+
+                                }
+                            }
+                        });
+                        thread.start();
+
+                    }
+                }
+            });
+            thread.start();
+        }
     }
 
     /** register the BroadcastReceiver with the intent values to be matched */
@@ -193,6 +278,7 @@ public class WiFiDirectActivity extends Activity implements ChannelListener, Dev
 
     @Override
     public void disconnect() {
+        Log.e("onDisconnect", "Hello");
         final DeviceDetailFragment fragment = (DeviceDetailFragment) getFragmentManager()
                 .findFragmentById(R.id.frag_detail);
         fragment.resetViews();
@@ -214,6 +300,7 @@ public class WiFiDirectActivity extends Activity implements ChannelListener, Dev
 
     @Override
     public void onChannelDisconnected() {
+        Log.e("onChannelDisconnect", "Hello");
         // we will try once more
         if (manager != null && !retryChannel) {
             Toast.makeText(this, "Channel lost. Trying again", Toast.LENGTH_LONG).show();
@@ -229,7 +316,7 @@ public class WiFiDirectActivity extends Activity implements ChannelListener, Dev
 
     @Override
     public void cancelDisconnect() {
-
+        Log.e("cancelDisconnect", "Hello");
         /*
          * A cancel abort request by user. Disconnect i.e. removeGroup if
          * already connected. Else, request WifiP2pManager to abort the ongoing

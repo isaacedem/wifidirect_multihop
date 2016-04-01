@@ -334,6 +334,14 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
                 //save IP to GO Global IP LIST
                 //send client updated list
             }
+            if (message.getmMessageType().equals("RemovePeer")) {
+                Log.d(WiFiDirectActivity.TAG, "RemovePeer Message Received");
+                String deviceName = (String) message.getmMesssageData();
+                Log.d("PeerLIst Data Before", peerList.getDevices().size() + "");
+                peerList.removeDevice(deviceName);
+                Log.d("PeerLIst Data After", peerList.getDevices().size() + "");
+                sendUpdatedPeerList();
+            }
 
         }
 
@@ -407,6 +415,9 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
                                 socket.close();
                             } catch (Exception e) {
                                 Log.d(WiFiDirectActivity.TAG, "Client hello world message: " + e);
+
+                                //Client no longer in group
+
                             }
                         }
                     });

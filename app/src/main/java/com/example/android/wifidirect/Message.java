@@ -14,6 +14,7 @@ public class Message implements Serializable{
      * Text
      * File
      * PeerList
+     * RemovePeer
      */
     private String mMessageType;
     private Object mMesssageData;

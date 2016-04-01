@@ -169,11 +169,16 @@ public class DeviceListFragment extends ListFragment implements PeerListListener
         if (progressDialog != null && progressDialog.isShowing()) {
             progressDialog.dismiss();
         }
+
         peers.clear();
         peers.addAll(peerList.getDeviceList());
-
+        Log.d("DeviceListFragment", "onPeersAvailable peers original " + peers.size());
+        for (WifiP2pDevice item : peers) {
+            Log.d("DeviceListFragment", "onPeersAvailable peers original " + item.deviceName);
+        }
+//        Log.d("DeviceListFragment", "onPeersAvailable peers original " + peers.toString());
         if (this.device.isGroupOwner()) {
-            Log.d("DeviceListFragment", "onPeersAvailable peerlist devices " + globalPeerList.getDevices().size());
+            Log.d("DeviceListFragment", "onPeersAvailable peerlist devices " + globalPeerList.getDevices().keySet());
 
 
             Iterator<String> itr = globalPeerList.getDevices().keySet().iterator();
@@ -187,7 +192,7 @@ public class DeviceListFragment extends ListFragment implements PeerListListener
                 if (!found)
                     itr.remove();
             }
-            Log.d("DeviceListFragment", "onPeersAvailable remaining peerlist devices " + globalPeerList.getDevices().size());
+            Log.d("DeviceListFragment", "onPeersAvailable remaining peerlist devices " + globalPeerList.getDevices().keySet());
             // first time should be 0 so only runs when device leaves
             if (globalPeerList.getDevices().size() > 0) {
                 DeviceDetailFragment.FileServerAsyncTask.sendUpdatedPeerList();
