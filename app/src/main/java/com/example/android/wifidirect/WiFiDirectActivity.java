@@ -140,6 +140,7 @@ public class WiFiDirectActivity extends Activity implements ChannelListener, Dev
                             @Override
                             public void run() {
                                 try {
+                                    Log.i("RemovePeer", "Send remove peeer message for client: " + (String) messageToGO.getmMesssageData());
                                     Socket socket = new Socket();
                                     socket.connect((new InetSocketAddress(peerList.getGOIPAddress(), 8988)), 5000);
                                     OutputStream os = socket.getOutputStream();
