@@ -335,8 +335,10 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
                 //send client updated list
             }
             if (message.getmMessageType().equals("RemovePeer")) {
-                Log.d(WiFiDirectActivity.TAG, "RemovePeer Message Received");
+
                 String deviceName = (String) message.getmMesssageData();
+                Log.d(WiFiDirectActivity.TAG, "RemovePeer Message Received for " + deviceName );
+                Log.d(WiFiDirectActivity.TAG, "RemovePeer Peerlist " + peerList.getDevices().keySet().toString() );
                 Log.d("PeerLIst Data Before", peerList.getDevices().size() + "");
                 peerList.removeDevice(deviceName);
                 Log.d("PeerLIst Data After", peerList.getDevices().size() + "");
