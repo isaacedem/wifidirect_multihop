@@ -32,25 +32,19 @@
                 android:layout_height="wrap_content"
                 android:text="@string/get_file_button"
                 android:visibility="gone" />
-            <LinearLayout
+            <EditText
+                android:layout_width="50dp"
+                android:layout_height="wrap_content"
+                android:id="@+id/receiverView"
+                android:maxLength="1"
+                android:inputType="number"
+                android:gravity="center"/>
+            <Button
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                >
-                <EditText
-                    android:layout_width="50dp"
-                    android:layout_height="wrap_content"
-                    android:id="@+id/receiverView"
-                    android:maxLength="1"
-                    android:inputType="number"
-                    android:gravity="center"/>
-                <Button
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:id="@+id/sendMessageBtn"
-                    android:text="Send"
-                    />
-            </LinearLayout>
+                android:id="@+id/sendMessageBtn"
+                android:text="Send"
+                />
         </LinearLayout>
         <TextView
             android:id="@+id/device_address"
@@ -86,5 +80,4 @@
             android:id="@+id/status_text">
         </TextView>
     </LinearLayout>
-
 </FrameLayout>

@@ -70,8 +70,6 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
     private EditText receiverView;
     private Button sendBtn;
 
-    static private ServerSocket serverSocket;
-
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
@@ -129,15 +127,12 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
                         startActivityForResult(intent, CHOOSE_FILE_RESULT_CODE);
                     }
                 });
-
-        receiverView = (EditText) mContentView.findViewById(R.id.receiverView);
         receiverView = (EditText) mContentView.findViewById(R.id.receiverView);
         sendBtn = (Button) mContentView.findViewById(R.id.sendMessageBtn);
         sendBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 sendMessage();
-                createTask();
             }
         });
 
@@ -176,7 +171,6 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
                             @Override
                             public void run() {
                                 try {
-                                    Log.i("RemovePeer", "Send remove peeer message for client: " + (String) messageToGO.getmMesssageData());
                                     Socket socket = new Socket();
                                     socket.connect((new InetSocketAddress(peerList.getGOIPAddress(), 8988)), 5000);
                                     OutputStream os = socket.getOutputStream();
@@ -187,6 +181,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
                                     socket.close();
                                 } catch (Exception e) {
                                     Log.d(WiFiDirectActivity.TAG, "Client peerlist message: " + e);
+                                    //Message failed so send Group Owner saying it is not in the group no more
 
                                 }
                             }
@@ -241,8 +236,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         // socket.
 
         //open up socket for both Group Owner and Group Member
-        new FileServerAsyncTask(getActivity(), mContentView.findViewById(R.id.status_text))
-                .execute();
+        createAsyncTask();
         if (info.groupFormed && info.isGroupOwner) {
 
         } else if (info.groupFormed) {
@@ -289,10 +283,6 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         thread.start();
     }
 
-    public void createTask(){
-        new FileServerAsyncTask(getActivity(), mContentView.findViewById(R.id.status_text))
-                .execute();
-    }
     /**
      * Updates the UI with device data
      *
@@ -325,6 +315,10 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         this.getView().setVisibility(View.GONE);
     }
 
+    public static void createAsyncTask() {
+        new FileServerAsyncTask().execute();
+    }
+
     /**
      * A simple server socket that accepts connection and writes some data on
      * the stream.
@@ -343,19 +337,18 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
             this.statusText = (TextView) statusText;
         }
 
+        public FileServerAsyncTask() {
+
+        }
+
         @Override
         protected ArrayList<String> doInBackground(Void... params) {
             try {
-                //ServerSocket serverSocket = new ServerSocket(8988);
-                if (serverSocket == null || serverSocket.isClosed()) {
-                    serverSocket = new ServerSocket();
-                    serverSocket.setReuseAddress(true);
-                    serverSocket.bind(new InetSocketAddress(8988));
-                }
-                    Log.d(WiFiDirectActivity.TAG, "Server: Socket opened");
+                ServerSocket serverSocket = new ServerSocket(8988);
+                Log.d(WiFiDirectActivity.TAG, "Server: Socket opened");
 //                serverSocket.setReuseAddress(true);
-                    Socket client = serverSocket.accept();
-                    Log.d(WiFiDirectActivity.TAG, "Server: connection done");
+                Socket client = serverSocket.accept();
+                Log.d(WiFiDirectActivity.TAG, "Server: connection done");
 //                final File f = new File(Environment.getExternalStorageDirectory() + "/"
 //                        + context.getPackageName() + "/wifip2pshared-" + System.currentTimeMillis()
 //                        + ".jpg");
@@ -373,18 +366,16 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
 
 //                ArrayList<String> passed = passing[0];
 
-                    Log.i("DeviceDetailFragment", "Inside Bonjour");
-                    ObjectInputStream objectInputStream = new ObjectInputStream(client.getInputStream());
-                    Object object = objectInputStream.readObject();
-
-                //serverSocket.close();
+                Log.i("DeviceDetailFragment", "Inside Bonjour");
+                ObjectInputStream objectInputStream = new ObjectInputStream(client.getInputStream());
+                Object object = objectInputStream.readObject();
+                serverSocket.close();
 
                 Message message = (Message) object;
 
                 processMessage(message, client);
                 ArrayList<String> results = new ArrayList<String>();
                 results.add(client.getInetAddress().toString());
-
                 return results;
 
             } catch (Exception e) {
@@ -428,6 +419,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
                 Log.d("PeerLIst Data After", peerList.getDevices().size() + "");
                 sendUpdatedPeerList();
             }
+            createAsyncTask();
 
         }
 
@@ -435,7 +427,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
             PeerList peerList = PeerList.getInstance();
             if (peerList.getDevices().size() > 0) {
                 // make sure GO is in peer list for easy access by anyone
-                peerList.addDevice(peerList.getMyPhoneName(), info.groupOwnerAddress.toString().substring(1));
+                peerList.addDevice(peerList.getMyPhoneName(), info.groupOwnerAddress.toString());
 
                 final HashMap<String, String> devices = peerList.getDevices();
                 final HashMap<String, String> updatedPeers = new HashMap<>();
@@ -444,7 +436,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
                 Log.d("DeviceDetailFrag", "Sending peerlist size: " + peerList.getDevices().size());
                 for (String device : devices.keySet()) {
                     final String ipAddress = devices.get(device);
-                    final Message message = new Message("PeerList", updatedPeers, info.groupOwnerAddress.toString().substring(1));
+                    final Message message = new Message("PeerList", updatedPeers, info.groupOwnerAddress.toString());
                     Log.d(WiFiDirectActivity.TAG, "Right before thread: ");
                     Thread thread = new Thread(new Runnable() {
                         @Override
@@ -461,9 +453,8 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
                                 oos.close();
                                 os.close();
                                 socket.close();
-                                Log.i("Sending peerList" ,"It is finished");
                             } catch (Exception e) {
-                                Log.e(WiFiDirectActivity.TAG, "Client peerlist message: " + e);
+                                Log.d(WiFiDirectActivity.TAG, "Client peerlist message: " + e);
                             }
                         }
                     });
@@ -479,12 +470,12 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         @Override
         protected void onPostExecute(final ArrayList<String> result) {
 //            if (result != null) {
-//                statusText.setText("File copied - " + result);
-//                Intent intent = new Intent();
-//                intent.setAction(android.content.Intent.ACTION_VIEW);
-//                intent.setDataAndType(Uri.parse("file://" + result), "image/*");
-//                context.startActivity(intent);
-                //Log.d(WiFiDirectActivity.TAG, "Ip Address is " + result);
+////                statusText.setText("File copied - " + result);
+////                Intent intent = new Intent();
+////                intent.setAction(android.content.Intent.ACTION_VIEW);
+////                intent.setDataAndType(Uri.parse("file://" + result), "image/*");
+////                context.startActivity(intent);
+//                Log.d(WiFiDirectActivity.TAG, "Ip Address is " + result);
 //                if (result.get(0).toString().equals("/192.168.49.1")) {
 //                    Thread thread = new Thread(new Runnable() {
 //                        @Override
@@ -531,8 +522,8 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
 //                });
 //                thread.start();
 //                Toast.makeText(context, result.get(0).toString(), Toast.LENGTH_SHORT).show();
- //           }
-
+//            }
+//
         }
 
         /*
@@ -541,7 +532,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
          */
         @Override
         protected void onPreExecute() {
-            statusText.setText("Opening a server socket");
+//            statusText.setText("Opening a server socket");
         }
 
     }
