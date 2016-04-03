@@ -72,7 +72,7 @@ public class DeviceListFragment extends ListFragment implements PeerListListener
     }
 
     private static String getDeviceStatus(int deviceStatus) {
-        //Log.d(WiFiDirectActivity.TAG, "Peer status :" + deviceStatus);
+        Log.d(WiFiDirectActivity.TAG, "Peer status :" + deviceStatus);
         switch (deviceStatus) {
             case WifiP2pDevice.AVAILABLE:
                 return "Available";
@@ -173,31 +173,31 @@ public class DeviceListFragment extends ListFragment implements PeerListListener
         peers.clear();
         peers.addAll(peerList.getDeviceList());
         Log.d("DeviceListFragment", "onPeersAvailable peers original " + peers.size());
-        for (WifiP2pDevice item : peers) {
-            //Log.d("DeviceListFragment", "onPeersAvailable peers original " + item.deviceName);
-        }
+        //for (WifiP2pDevice item : peers) {
+        //    Log.d("DeviceListFragment", "onPeersAvailable peers original " + item.deviceName);
+        //}
 //        Log.d("DeviceListFragment", "onPeersAvailable peers original " + peers.toString());
-//        if (this.device.isGroupOwner()) {
-//            Log.d("DeviceListFragment", "onPeersAvailable peerlist devices " + globalPeerList.getDevices().keySet());
-//
-//
-//            Iterator<String> itr = globalPeerList.getDevices().keySet().iterator();
-//            while (itr.hasNext()) {
-//                String device = itr.next();
-//                boolean found = false;
-//                for (WifiP2pDevice peer : peers) {
-//                    if (device.equals(peer.deviceName))
-//                        found = true;
-//                }
-//                if (!found)
-//                    itr.remove();
-//            }
-//            Log.d("DeviceListFragment", "onPeersAvailable remaining peerlist devices " + globalPeerList.getDevices().keySet());
-//            // first time should be 0 so only runs when device leaves
-//            if (globalPeerList.getDevices().size() > 0) {
-//                DeviceDetailFragment.FileServerAsyncTask.sendUpdatedPeerList();
-//            }
-//        }
+        if (this.device.isGroupOwner()) {
+            Log.d("DeviceListFragment", "onPeersAvailable peerlist devices " + globalPeerList.getDevices().keySet());
+
+
+            Iterator<String> itr = globalPeerList.getDevices().keySet().iterator();
+            while (itr.hasNext()) {
+                String device = itr.next();
+                boolean found = false;
+                for (WifiP2pDevice peer : peers) {
+                    if (device.equals(peer.deviceName))
+                        found = true;
+                }
+                if (!found)
+                    itr.remove();
+            }
+            Log.d("DeviceListFragment", "onPeersAvailable remaining peerlist devices " + globalPeerList.getDevices().keySet());
+            // first time should be 0 so only runs when device leaves
+            if (globalPeerList.getDevices().size() > 0) {
+                DeviceDetailFragment.FileServerAsyncTask.sendUpdatedPeerList();
+            }
+        }
 
 
         for (WifiP2pDevice peer : peers) {

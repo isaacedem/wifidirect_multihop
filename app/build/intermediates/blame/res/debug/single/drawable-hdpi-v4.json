@@ -1,11 +1,27 @@
 [
     {
+        "merged": "/Users/keyurpatel/AndroidStudioProjects/wifidirect_multihop/app/build/intermediates/res/merged/debug/drawable-hdpi-v4/icon.png",
+        "source": "/Users/keyurpatel/AndroidStudioProjects/wifidirect_multihop/app/src/main/res/drawable-hdpi/icon.png"
+    },
+    {
         "merged": "/Users/idorgbefu/AndroidStudioProjects/WiFiDirectDemo1/app/build/intermediates/res/merged/debug/drawable-hdpi-v4/ic_action_on_off.png",
         "source": "/Users/idorgbefu/AndroidStudioProjects/WiFiDirectDemo1/app/src/main/res/drawable-hdpi/ic_action_on_off.png"
     },
     {
         "merged": "/Users/idorgbefu/AndroidStudioProjects/WiFiDirectDemo1/app/build/intermediates/res/merged/debug/drawable-hdpi-v4/ic_launcher.png",
         "source": "/Users/idorgbefu/AndroidStudioProjects/WiFiDirectDemo1/app/src/main/res/drawable-hdpi/ic_launcher.png"
+    },
+    {
+        "merged": "/Users/keyurpatel/AndroidStudioProjects/wifidirect_multihop/app/build/intermediates/res/merged/debug/drawable-hdpi-v4/ic_launcher.png",
+        "source": "/Users/keyurpatel/AndroidStudioProjects/wifidirect_multihop/app/src/main/res/drawable-hdpi/ic_launcher.png"
+    },
+    {
+        "merged": "/Users/keyurpatel/AndroidStudioProjects/wifidirect_multihop/app/build/intermediates/res/merged/debug/drawable-hdpi-v4/ic_action_on_off.png",
+        "source": "/Users/keyurpatel/AndroidStudioProjects/wifidirect_multihop/app/src/main/res/drawable-hdpi/ic_action_on_off.png"
+    },
+    {
+        "merged": "/Users/keyurpatel/AndroidStudioProjects/wifidirect_multihop/app/build/intermediates/res/merged/debug/drawable-hdpi-v4/ic_action_discover.png",
+        "source": "/Users/keyurpatel/AndroidStudioProjects/wifidirect_multihop/app/src/main/res/drawable-hdpi/ic_action_discover.png"
     },
     {
         "merged": "/Users/idorgbefu/AndroidStudioProjects/WiFiDirectDemo1/app/build/intermediates/res/merged/debug/drawable-hdpi-v4/icon.png",
