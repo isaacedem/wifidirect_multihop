@@ -73,8 +73,7 @@ public class WiFiDirectActivity extends Activity implements ChannelListener, Dev
     private Channel channel;
     private BroadcastReceiver receiver = null;
 
-    private EditText receiverView;
-    private Button sendBtn;
+
 
     /**
      * @param isWifiP2pEnabled the isWifiP2pEnabled to set
@@ -98,72 +97,10 @@ public class WiFiDirectActivity extends Activity implements ChannelListener, Dev
         manager = (WifiP2pManager) getSystemService(Context.WIFI_P2P_SERVICE);
         channel = manager.initialize(this, getMainLooper(), null);
 
-        receiverView = (EditText) findViewById(R.id.receiverView);
-        sendBtn = (Button) findViewById(R.id.sendMessageBtn);
-        sendBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                sendMessage();
-            }
-        });
+
     }
 
-    public void sendMessage(){
-        Log.i("Inside sendMessage", "Send message");
-        final String recevierID = receiverView.getText().toString();
 
-        final PeerList peerList = PeerList.getInstance();
-        final Message message = new Message("Text", new String("jfkajglkajgkla"), peerList.getMyPhoneName());
-
-        final String receiverIP = peerList.getDeviceIP(recevierID);
-        if(receiverIP == null ){
-            //todo later have to check for multi-hop
-        } else {
-            Log.i("Inside sendMessage", "Send message");
-            Thread thread = new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        Socket socket = new Socket();
-                        socket.connect((new InetSocketAddress(receiverIP, 8988)), 5000);
-                        OutputStream os = socket.getOutputStream();
-                        ObjectOutputStream oos = new ObjectOutputStream(os);
-                        oos.writeObject(message);
-                        oos.close();
-                        os.close();
-                        socket.close();
-                    } catch (Exception e) {
-                        Log.d(WiFiDirectActivity.TAG, "Could not send message to Receiver at: " + receiverIP);
-                        //Message failed so send Group Owner saying it is not in the group no more
-                        final Message messageToGO = new Message("RemovePeer", new String(recevierID), peerList.getMyPhoneName());
-                        Thread thread = new Thread(new Runnable() {
-                            @Override
-                            public void run() {
-                                try {
-                                    Log.i("RemovePeer", "Send remove peeer message for client: " + (String) messageToGO.getmMesssageData());
-                                    Socket socket = new Socket();
-                                    socket.connect((new InetSocketAddress(peerList.getGOIPAddress(), 8988)), 5000);
-                                    OutputStream os = socket.getOutputStream();
-                                    ObjectOutputStream oos = new ObjectOutputStream(os);
-                                    oos.writeObject(messageToGO);
-                                    oos.close();
-                                    os.close();
-                                    socket.close();
-                                } catch (Exception e) {
-                                    Log.d(WiFiDirectActivity.TAG, "Client peerlist message: " + e);
-                                    //Message failed so send Group Owner saying it is not in the group no more
-
-                                }
-                            }
-                        });
-                        thread.start();
-
-                    }
-                }
-            });
-            thread.start();
-        }
-    }
 
     /** register the BroadcastReceiver with the intent values to be matched */
     @Override
