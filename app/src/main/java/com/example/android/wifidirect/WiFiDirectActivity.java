@@ -288,4 +288,24 @@ public class WiFiDirectActivity extends Activity implements ChannelListener, Dev
         }
 
     }
+    @Override
+    public void searchPeers(String previousGOName){
+        final DeviceListFragment fragment = (DeviceListFragment) getFragmentManager()
+                .findFragmentById(R.id.frag_list);
+        fragment.onInitiateDiscovery();
+        manager.discoverPeers(channel, new WifiP2pManager.ActionListener() {
+
+            @Override
+            public void onSuccess() {
+                Toast.makeText(WiFiDirectActivity.this, "Discovery Initiated",
+                        Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onFailure(int reasonCode) {
+                Toast.makeText(WiFiDirectActivity.this, "Discovery Failed : " + reasonCode,
+                        Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
 }

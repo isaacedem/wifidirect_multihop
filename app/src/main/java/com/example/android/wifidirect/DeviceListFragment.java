@@ -20,6 +20,7 @@ import android.app.ListFragment;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.net.wifi.WpsInfo;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pDeviceList;
@@ -162,6 +163,8 @@ public class DeviceListFragment extends ListFragment implements PeerListListener
         view.setText(getDeviceStatus(device.status));
     }
 
+    private boolean autoConnectFlag = false;
+
     @Override
     public void onPeersAvailable(WifiP2pDeviceList peerList) {
         PeerList globalPeerList = PeerList.getInstance();
@@ -177,36 +180,64 @@ public class DeviceListFragment extends ListFragment implements PeerListListener
         //    Log.d("DeviceListFragment", "onPeersAvailable peers original " + item.deviceName);
         //}
 //        Log.d("DeviceListFragment", "onPeersAvailable peers original " + peers.toString());
-        if (this.device.isGroupOwner()) {
-            Log.d("DeviceListFragment", "onPeersAvailable peerlist devices " + globalPeerList.getDevices().keySet());
-
-
-            Iterator<String> itr = globalPeerList.getDevices().keySet().iterator();
-            while (itr.hasNext()) {
-                String device = itr.next();
-                boolean found = false;
-                for (WifiP2pDevice peer : peers) {
-                    if (device.equals(peer.deviceName))
-                        found = true;
-                }
-                if (!found)
-                    itr.remove();
-            }
-            Log.d("DeviceListFragment", "onPeersAvailable remaining peerlist devices " + globalPeerList.getDevices().keySet());
-            // first time should be 0 so only runs when device leaves
-            if (globalPeerList.getDevices().size() > 0) {
-                DeviceDetailFragment.FileServerAsyncTask.sendUpdatedPeerList();
-            }
-        }
+//        if (this.device.isGroupOwner()) {
+//            Log.d("DeviceListFragment", "onPeersAvailable peerlist devices " + globalPeerList.getDevices().keySet());
+//
+//
+//            Iterator<String> itr = globalPeerList.getDevices().keySet().iterator();
+//            while (itr.hasNext()) {
+//                String device = itr.next();
+//                boolean found = false;
+//                for (WifiP2pDevice peer : peers) {
+//                    if (device.equals(peer.deviceName))
+//                        found = true;
+//                }
+//                if (!found)
+//                    itr.remove();
+//            }
+//            Log.d("DeviceListFragment", "onPeersAvailable remaining peerlist devices " + globalPeerList.getDevices().keySet());
+//            // first time should be 0 so only runs when device leaves
+//            if (globalPeerList.getDevices().size() > 0) {
+//                DeviceDetailFragment.FileServerAsyncTask.sendUpdatedPeerList();
+//            }
+//        }
 
 
         for (WifiP2pDevice peer : peers) {
-            Log.d(WiFiDirectActivity.TAG, peer.deviceName + " " + peer.isGroupOwner());
+            Log.d(WiFiDirectActivity.TAG,  peer.deviceName + " " + peer.isGroupOwner());
         }
         ((WiFiPeerListAdapter) getListAdapter()).notifyDataSetChanged();
         if (peers.size() == 0) {
             Log.d(WiFiDirectActivity.TAG, "No devices found");
             return;
+        }
+
+        Message forwardedMessage = ForwardMessageSingleton.getInstance().getMessage();
+        if(ForwardMessageSingleton.getInstance().isDoesMessageNeedToBeForwarded()){
+            for (WifiP2pDevice peer2 : peers) {
+                if(peer2.deviceName.equals(forwardedMessage.getmRecipientName())){
+                    //check device to make sure device is not connected to a group
+                    //if connected to a group than do not connect and connect to another GO
+                    Log.i("Forwarded Message", "Found Recipent: " + peer2.deviceName + " forwadedname: " + forwardedMessage.getmRecipientName());
+
+
+                    WifiP2pConfig config = new WifiP2pConfig();
+                    config.groupOwnerIntent = 15; //Less probability to become the GO
+                    config.deviceAddress = peer2.deviceAddress;
+                    config.wps.setup = WpsInfo.PBC;
+                    if (progressDialog != null && progressDialog.isShowing()) {
+                        progressDialog.dismiss();
+                    }
+                    progressDialog = ProgressDialog.show(getActivity(), "Press back to cancel",
+                            "Connecting to :" + device.deviceAddress, true, true
+                    );
+                    ((DeviceActionListener) getActivity()).connect(config);
+                    ForwardMessageSingleton.getInstance().setDoesMessageNeedToBeForwarded(false);
+
+
+
+                }
+            }
         }
 
     }
@@ -246,6 +277,8 @@ public class DeviceListFragment extends ListFragment implements PeerListListener
         void connect(WifiP2pConfig config);
 
         void disconnect();
+
+        void searchPeers(String name);
     }
 
 }

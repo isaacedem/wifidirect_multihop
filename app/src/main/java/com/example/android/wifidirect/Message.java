@@ -20,6 +20,7 @@ public class Message implements Serializable{
     private String mMessageType;
     private Object mMesssageData;
     private String mSenderDeviceName;
+    private String mRecipientName;
 
     Message(String messageType, Object messageData, String senderDeviceName){
         this.mMessageType = messageType;
@@ -51,5 +52,14 @@ public class Message implements Serializable{
     public void setmMesssageData(Object mMesssageData) {
 
         this.mMesssageData = mMesssageData;
+    }
+
+
+    public String getmRecipientName() {
+        return mRecipientName;
+    }
+
+    public void setmRecipientName(String mRecipientName) {
+        this.mRecipientName = mRecipientName;
     }
 }

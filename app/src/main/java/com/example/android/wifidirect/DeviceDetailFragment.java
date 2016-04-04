@@ -180,10 +180,51 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
 
             final PeerList peerList = PeerList.getInstance();
             final Message message = new Message("Text", new String("jfkajglkajgkla"), peerList.getMyPhoneName());
+            message.setmRecipientName(recevierID);
+
+
 
             final String receiverIP = peerList.getDeviceIP(recevierID);
             if (receiverIP == null) {
                 //todo later have to check for multi-hop
+                if(peerList.getDevices().size() > 2){
+                    for(String key : peerList.getDevices().keySet()){
+                        String value = peerList.getDevices().get(key);
+                        if(value.equals(peerList.getGOIPAddress()) || key.equals(peerList.getMyPhoneName())){
+                            continue;
+                        } else {
+
+                            final Message disconnectMessage = new Message("DisconnectPeer", message, peerList.getMyPhoneName());
+                            final String diconnectDeviceIP = peerList.getDeviceIP(key);
+
+                            Thread thread = new Thread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    try {
+                                        Log.d(WiFiDirectActivity.TAG, "Inside sending disconnect: ");
+                                        Socket socket = new Socket();
+                                        socket.connect((new InetSocketAddress(diconnectDeviceIP, 8988)), 5000);
+                                        OutputStream os = socket.getOutputStream();
+                                        ObjectOutputStream oos = new ObjectOutputStream(os);
+                                        oos.writeObject(disconnectMessage);
+                                        oos.close();
+                                        os.close();
+                                        socket.close();
+                                    } catch (Exception e) {
+                                        Log.d(WiFiDirectActivity.TAG, "Client disconnect message: " + e);
+                                    }
+                                }
+                            });
+                            thread.start();
+
+
+
+                        }
+                    }
+                }
+
+
+
             } else {
                 Log.i("Inside sendMessage", "Send message");
                 Thread thread = new Thread(new Runnable() {
@@ -460,9 +501,16 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
             Log.i("Disconnect Message", "before message " + message.getmMessageType().toString());
             if (message.getmMessageType().equals("DisconnectPeer")) {
                 Log.i("DisConnect Message", "inside process message");
-                String deviceName = (String) message.getmMesssageData();
-                Log.d(WiFiDirectActivity.TAG, "Disconnect Message Received for " + deviceName);
+//                String deviceName = (String) message.getmMesssageData();
+//                Log.d(WiFiDirectActivity.TAG, "Disconnect Message Received for " + deviceName);
                 //disconnect Connect
+                Message messageToForward = (Message) message.getmMesssageData();
+                ForwardMessageSingleton forwardMessageSingleton = ForwardMessageSingleton.getInstance();
+                forwardMessageSingleton.setMessage(messageToForward);
+                forwardMessageSingleton.setDoesMessageNeedToBeForwarded(true);
+                Log.i("DisConnect Message", "Message to Forward Sender: " + messageToForward.getmSenderDeviceName());
+                Log.i("DisConnect Message", "Message to Forward Recipient: " + messageToForward.getmRecipientName());
+                Log.i("DisConnect Message", "Message to Forward: " + messageToForward.getmMesssageData().toString());
                 context.runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
@@ -470,7 +518,20 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
                     }
                 });
 
-
+                String previousGOName ="";
+                for(String key : peerList.getDevices().keySet()){
+                    if(peerList.getDevices().get(key).equals(peerList.getGOIPAddress())){
+                        previousGOName = key;
+                        break;
+                    }
+                }
+                final String previousGOName2 = previousGOName;
+                context.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        ((DeviceActionListener) context).searchPeers(previousGOName2);
+                    }
+                });
 
 
             }
