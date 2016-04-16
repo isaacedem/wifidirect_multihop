@@ -72,8 +72,9 @@ public class DeviceListFragment extends ListFragment implements PeerListListener
         return device;
     }
 
-    private static String getDeviceStatus(int deviceStatus) {
-        Log.d(WiFiDirectActivity.TAG, "Peer status :" + deviceStatus);
+    private static String getDeviceStatus(WifiP2pDevice device) {
+        int deviceStatus = device.status;
+        Log.d(WiFiDirectActivity.TAG, "Device " + device.deviceName+ " Peer status :" + deviceStatus);
         switch (deviceStatus) {
             case WifiP2pDevice.AVAILABLE:
                 return "Available";
@@ -135,7 +136,7 @@ public class DeviceListFragment extends ListFragment implements PeerListListener
                     top.setText(device.deviceName);
                 }
                 if (bottom != null) {
-                    bottom.setText(getDeviceStatus(device.status));
+                    bottom.setText(getDeviceStatus(device));
                 }
             }
 
@@ -160,7 +161,7 @@ public class DeviceListFragment extends ListFragment implements PeerListListener
 
 
         view = (TextView) mContentView.findViewById(R.id.my_status);
-        view.setText(getDeviceStatus(device.status));
+        view.setText(getDeviceStatus(device));
     }
 
     private boolean autoConnectFlag = false;
@@ -215,7 +216,8 @@ public class DeviceListFragment extends ListFragment implements PeerListListener
         Message forwardedMessage = ForwardMessageSingleton.getInstance().getMessage();
         if(ForwardMessageSingleton.getInstance().isDoesMessageNeedToBeForwarded()){
             for (WifiP2pDevice peer2 : peers) {
-                if(peer2.deviceName.equals(forwardedMessage.getmRecipientName())){
+                Log.d("Forwarded Message", peer2.deviceName + " " + peer2.status+" status");
+                if(peer2.deviceName.equals(forwardedMessage.getmRecipientName())&& !(peer2.status == WifiP2pDevice.CONNECTED)){
                     //check device to make sure device is not connected to a group
                     //if connected to a group than do not connect and connect to another GO
                     Log.i("Forwarded Message", "Found Recipent: " + peer2.deviceName + " forwadedname: " + forwardedMessage.getmRecipientName());
@@ -232,7 +234,7 @@ public class DeviceListFragment extends ListFragment implements PeerListListener
                             "Connecting to :" + device.deviceAddress, true, true
                     );
                     ((DeviceActionListener) getActivity()).connect(config);
-                    ForwardMessageSingleton.getInstance().setDoesMessageNeedToBeForwarded(false);
+//                    ForwardMessageSingleton.getInstance().setDoesMessageNeedToBeForwarded(false);
 
 
 
