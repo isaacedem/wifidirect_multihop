@@ -1,19 +1,3 @@
-/*
- * Copyright (C) 2011 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package com.example.android.wifidirect;
 
 import android.app.Activity;
@@ -22,6 +6,7 @@ import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.net.Uri;
 import android.net.wifi.WpsInfo;
 import android.net.wifi.p2p.WifiP2pConfig;
@@ -31,12 +16,14 @@ import android.net.wifi.p2p.WifiP2pManager.ConnectionInfoListener;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -72,6 +59,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
     private EditText receiverView;
     private Button sendBtn;
     private static Activity mParentActivity;
+    private EditText  messageTextView;
 
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
@@ -80,9 +68,12 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+    public View onCreateView(final LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         mParentActivity = getActivity();
         mContentView = inflater.inflate(R.layout.device_detail, null);
+
+        receiverView = (EditText) mContentView.findViewById(R.id.receiverView);
+        messageTextView = (EditText) mContentView.findViewById(R.id.messageTextView);
         mContentView.findViewById(R.id.btn_connect).setOnClickListener(new View.OnClickListener() {
 
             @Override
@@ -118,7 +109,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
                     }
                 });
 
-        mContentView.findViewById(R.id.btn_start_client).setOnClickListener(
+        mContentView.findViewById(R.id.sendImageBtn).setOnClickListener(
                 new View.OnClickListener() {
 
                     @Override
@@ -127,15 +118,17 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
                         // registered apps
                         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
                         intent.setType("image/*");
+                        //intent.putExtra("host",receiverView.getText());
                         startActivityForResult(intent, CHOOSE_FILE_RESULT_CODE);
                     }
                 });
-        receiverView = (EditText) mContentView.findViewById(R.id.receiverView);
+
         sendBtn = (Button) mContentView.findViewById(R.id.sendMessageBtn);
         sendBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 sendMessage();
+                messageTextView.setText("");
             }
         });
 
@@ -144,21 +137,96 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
 
     public void sendMessage(){
         Log.i("Inside sendMessage", "Send message");
-        if (info.isGroupOwner){  //The send btn on GO will send out disconnect messages
+//        if (info.isGroupOwner){  //The send btn on GO will send out disconnect messages
+//
+//            final String recevierID = receiverView.getText().toString();
+//            final PeerList peerList = PeerList.getInstance();
+//            final Message message = new Message("DisconnectPeer", new String(recevierID), peerList.getMyPhoneName());
+//            final String receiverIP = peerList.getDeviceIP(recevierID);
+//
+//
+//            Thread thread = new Thread(new Runnable() {
+//                @Override
+//                public void run() {
+//                    try {
+//                        Log.d(WiFiDirectActivity.TAG, "Inside sending disconnect: ");
+//                        Socket socket = new Socket();
+////                        socket.setReuseAddress(true);
+//                        socket.connect((new InetSocketAddress(receiverIP, 8988)), 5000);
+//                        OutputStream os = socket.getOutputStream();
+//                        ObjectOutputStream oos = new ObjectOutputStream(os);
+//                        oos.writeObject(message);
+//                        oos.close();
+//                        os.close();
+//                        socket.close();
+//                    } catch (Exception e) {
+//                        Log.d(WiFiDirectActivity.TAG, "Client disconnect message: " + e);
+//                    }
+//                }
+//            });
+//            thread.start();
 
-            final String recevierID = receiverView.getText().toString();
-            final PeerList peerList = PeerList.getInstance();
-            final Message message = new Message("DisconnectPeer", new String(recevierID), peerList.getMyPhoneName());
-            final String receiverIP = peerList.getDeviceIP(recevierID);
+
+        //} else {
+
+        final String recevierID = receiverView.getText().toString();
+
+        final PeerList peerList = PeerList.getInstance();
+        final Message message = new Message("Text", new String(messageTextView.getText().toString()), peerList.getMyPhoneName());
+        message.setmRecipientName(recevierID);
 
 
+
+        final String receiverIP = peerList.getDeviceIP(recevierID);
+        if (receiverIP == null) {
+            Log.i("Inside sendMessage", "Send message receiverIPNull");
+            //todo later have to check for multi-hop
+            if(peerList.getDevices().size() > 2){
+                for(String key : peerList.getDevices().keySet()){
+                    String value = peerList.getDevices().get(key);
+                    if(value.equals(peerList.getGOIPAddress()) || key.equals(peerList.getMyPhoneName())){
+                        continue;
+                    } else {
+
+                        final Message disconnectMessage = new Message("DisconnectPeer", message, peerList.getMyPhoneName());
+                        final String diconnectDeviceIP = peerList.getDeviceIP(key);
+
+                        Thread thread = new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    Log.d(WiFiDirectActivity.TAG, "Inside sending disconnect: ");
+                                    Socket socket = new Socket();
+                                    socket.connect((new InetSocketAddress(diconnectDeviceIP, 8988)), 5000);
+                                    OutputStream os = socket.getOutputStream();
+                                    ObjectOutputStream oos = new ObjectOutputStream(os);
+                                    oos.writeObject(disconnectMessage);
+                                    oos.close();
+                                    os.close();
+                                    socket.close();
+                                } catch (Exception e) {
+                                    Log.d(WiFiDirectActivity.TAG, "Client disconnect message: " + e);
+                                }
+                            }
+                        });
+                        thread.start();
+
+
+
+                    }
+                }
+            }
+
+
+
+        } else {
+            Log.i("Inside sendMessage", "Send message ELSE2");
             Thread thread = new Thread(new Runnable() {
                 @Override
                 public void run() {
                     try {
-                        Log.d(WiFiDirectActivity.TAG, "Inside sending disconnect: ");
                         Socket socket = new Socket();
-//                        socket.setReuseAddress(true);
+                        //socket.connect((new InetSocketAddress(receiverIP.replace("/",""), 8988)), 5000);
                         socket.connect((new InetSocketAddress(receiverIP, 8988)), 5000);
                         OutputStream os = socket.getOutputStream();
                         ObjectOutputStream oos = new ObjectOutputStream(os);
@@ -167,127 +235,69 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
                         os.close();
                         socket.close();
                     } catch (Exception e) {
-                        Log.d(WiFiDirectActivity.TAG, "Client disconnect message: " + e);
+                        Log.d(WiFiDirectActivity.TAG, "Could not send message to Receiver at: " + receiverIP.replace("/","") + " " + e.toString());
+                        //Message failed so send Group Owner saying it is not in the group no more
+                        //final Message messageToGO = new Message("RemovePeer", new String(recevierID.replace("/","")), peerList.getMyPhoneName());
+                        final Message messageToGO = new Message("RemovePeer", new String(recevierID), peerList.getMyPhoneName());
+
+                        Thread thread = new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    Socket socket = new Socket();
+                                    socket.connect((new InetSocketAddress(peerList.getGOIPAddress(), 8988)), 5000);
+                                    OutputStream os = socket.getOutputStream();
+                                    ObjectOutputStream oos = new ObjectOutputStream(os);
+                                    oos.writeObject(messageToGO);
+                                    oos.close();
+                                    os.close();
+                                    socket.close();
+                                } catch (Exception e) {
+                                    Log.d(WiFiDirectActivity.TAG, "Client peerlist message: " + e);
+                                    //Message failed so send Group Owner saying it is not in the group no more
+
+                                }
+                            }
+                        });
+                        thread.start();
+
                     }
                 }
             });
             thread.start();
-
-
-        } else {
-
-            final String recevierID = receiverView.getText().toString();
-
-            final PeerList peerList = PeerList.getInstance();
-            final Message message = new Message("Text", new String("jfkajglkajgkla"), peerList.getMyPhoneName());
-            message.setmRecipientName(recevierID);
-
-
-
-            final String receiverIP = peerList.getDeviceIP(recevierID);
-            if (receiverIP == null) {
-                //todo later have to check for multi-hop
-                if(peerList.getDevices().size() > 2){
-                    for(String key : peerList.getDevices().keySet()){
-                        String value = peerList.getDevices().get(key);
-                        if(value.equals(peerList.getGOIPAddress()) || key.equals(peerList.getMyPhoneName())){
-                            continue;
-                        } else {
-
-                            final Message disconnectMessage = new Message("DisconnectPeer", message, peerList.getMyPhoneName());
-                            final String diconnectDeviceIP = peerList.getDeviceIP(key);
-
-                            Thread thread = new Thread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    try {
-                                        Log.d(WiFiDirectActivity.TAG, "Inside sending disconnect: ");
-                                        Socket socket = new Socket();
-                                        socket.connect((new InetSocketAddress(diconnectDeviceIP, 8988)), 5000);
-                                        OutputStream os = socket.getOutputStream();
-                                        ObjectOutputStream oos = new ObjectOutputStream(os);
-                                        oos.writeObject(disconnectMessage);
-                                        oos.close();
-                                        os.close();
-                                        socket.close();
-                                    } catch (Exception e) {
-                                        Log.d(WiFiDirectActivity.TAG, "Client disconnect message: " + e);
-                                    }
-                                }
-                            });
-                            thread.start();
-
-
-
-                        }
-                    }
-                }
-
-
-
-            } else {
-                Log.i("Inside sendMessage", "Send message");
-                Thread thread = new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            Socket socket = new Socket();
-                            socket.connect((new InetSocketAddress(receiverIP, 8988)), 5000);
-                            OutputStream os = socket.getOutputStream();
-                            ObjectOutputStream oos = new ObjectOutputStream(os);
-                            oos.writeObject(message);
-                            oos.close();
-                            os.close();
-                            socket.close();
-                        } catch (Exception e) {
-                            Log.d(WiFiDirectActivity.TAG, "Could not send message to Receiver at: " + receiverIP);
-                            //Message failed so send Group Owner saying it is not in the group no more
-                            final Message messageToGO = new Message("RemovePeer", new String(recevierID), peerList.getMyPhoneName());
-                            Thread thread = new Thread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    try {
-                                        Socket socket = new Socket();
-                                        socket.connect((new InetSocketAddress(peerList.getGOIPAddress(), 8988)), 5000);
-                                        OutputStream os = socket.getOutputStream();
-                                        ObjectOutputStream oos = new ObjectOutputStream(os);
-                                        oos.writeObject(messageToGO);
-                                        oos.close();
-                                        os.close();
-                                        socket.close();
-                                    } catch (Exception e) {
-                                        Log.d(WiFiDirectActivity.TAG, "Client peerlist message: " + e);
-                                        //Message failed so send Group Owner saying it is not in the group no more
-
-                                    }
-                                }
-                            });
-                            thread.start();
-
-                        }
-                    }
-                });
-                thread.start();
-            }
         }
+        // }
     }
 
+    //After image chosen from gallery
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
 
+        super.onActivityResult(requestCode, resultCode, data);
+
+        try {
+            Uri imageUri = data.getData();
+            Bitmap bitmap = MediaStore.Images.Media.getBitmap( getActivity().getContentResolver(), imageUri);
+            SerialBitmap serialBitmap = new SerialBitmap(bitmap);
+            sendImageMessage(serialBitmap);
+
+        }catch (Exception ex){
+            Log.i("DeviceDetail", "Unable to load image");
+        }
+
+
+
         // User has picked an image. Transfer it to group owner i.e peer using
         // FileTransferService.
-        Uri uri = data.getData();
-        TextView statusText = (TextView) mContentView.findViewById(R.id.status_text);
-        statusText.setText("Sending: " + uri);
-        Log.d(WiFiDirectActivity.TAG, "Intent----------- " + uri);
-        Intent serviceIntent = new Intent(getActivity(), FileTransferService.class);
-        serviceIntent.setAction(FileTransferService.ACTION_SEND_FILE);
-        serviceIntent.putExtra(FileTransferService.EXTRAS_FILE_PATH, uri.toString());
-        serviceIntent.putExtra(FileTransferService.EXTRAS_GROUP_OWNER_ADDRESS,
-                info.groupOwnerAddress.getHostAddress());
-        serviceIntent.putExtra(FileTransferService.EXTRAS_GROUP_OWNER_PORT, 8988);
-        getActivity().startService(serviceIntent);
+//        Uri uri = data.getData();
+//
+//        Intent serviceIntent = new Intent(getActivity(), FileTransferService.class);
+//        serviceIntent.setAction(FileTransferService.ACTION_SEND_FILE);
+//        serviceIntent.putExtra(FileTransferService.EXTRAS_FILE_PATH, uri.toString());
+//        serviceIntent.putExtra(FileTransferService.EXTRAS_GROUP_OWNER_ADDRESS,
+//                info.groupOwnerAddress.getHostAddress());
+//        serviceIntent.putExtra(FileTransferService.EXTRAS_GROUP_OWNER_PORT, 8988);
+//        getActivity().startService(serviceIntent);
     }
 
     @Override
@@ -298,6 +308,10 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         this.info = info;
         this.getView().setVisibility(View.VISIBLE);
 
+        Log.i("onConnectInfoAvail", "in here");
+        //Clear peerlist when connecting to new group
+        //PeerList.getInstance().getDevices().clear();
+
         // The owner IP is now known.
         TextView view = (TextView) mContentView.findViewById(R.id.group_owner);
         view.setText(getResources().getString(R.string.group_owner_text)
@@ -305,8 +319,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
                 : getResources().getString(R.string.no)));
 
         // InetAddress from WifiP2pInfo struct.
-        view = (TextView) mContentView.findViewById(R.id.device_info);
-        view.setText("Group Owner IP - " + info.groupOwnerAddress.getHostAddress());
+
 
         // After the group negotiation, we assign the group owner as the file
         // server. The file server is single threaded, single connection server
@@ -323,14 +336,43 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
 
             // In this case, we enable the
             // get file button.
-            mContentView.findViewById(R.id.btn_start_client).setVisibility(View.VISIBLE);
-            ((TextView) mContentView.findViewById(R.id.status_text)).setText(getResources()
-                    .getString(R.string.client_text));
+            //mContentView.findViewById(R.id.btn_start_client).setVisibility(View.VISIBLE);
 
         }
 
         // hide the connect button
         mContentView.findViewById(R.id.btn_connect).setVisibility(View.GONE);
+    }
+
+    private void sendImageMessage(SerialBitmap bmp){
+
+        final String recevierID = receiverView.getText().toString();
+        final String receiverIP = PeerList.getInstance().getDeviceIP(recevierID);
+        final Message message = new Message("Image", bmp, recevierID);
+
+        Log.d(WiFiDirectActivity.TAG, "Right before sending image, ReciverIP " + receiverIP );
+        Thread thread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Log.d(WiFiDirectActivity.TAG, "Inside beg send message thread: ");
+                    Socket socket = new Socket();
+//                        socket.setReuseAddress(true);
+                    socket.connect((new InetSocketAddress(receiverIP, 8988)), 5000);
+                    OutputStream os = socket.getOutputStream();
+                    ObjectOutputStream oos = new ObjectOutputStream(os);
+                    oos.writeObject(message);
+                    oos.close();
+                    os.close();
+                    socket.close();
+                    Log.d(WiFiDirectActivity.TAG, "Inside end send messagethread: ");
+                } catch (Exception e) {
+                    Log.e(WiFiDirectActivity.TAG, "Send Image message: " + e);
+                }
+            }
+        });
+        thread.start();
+
     }
 
     private void sendBonjourMessage() {
@@ -367,11 +409,9 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
      */
     public void showDetails(WifiP2pDevice device) {
         this.device = device;
+        Log.i("onDeviceClick","clicked: " + device.deviceName);
         this.getView().setVisibility(View.VISIBLE);
-        TextView view = (TextView) mContentView.findViewById(R.id.device_address);
-        view.setText(device.deviceAddress);
-        view = (TextView) mContentView.findViewById(R.id.device_info);
-        view.setText(device.toString());
+
 
     }
 
@@ -380,14 +420,10 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
      */
     public void resetViews() {
         mContentView.findViewById(R.id.btn_connect).setVisibility(View.VISIBLE);
-        TextView view = (TextView) mContentView.findViewById(R.id.device_address);
+
+        TextView view = (TextView) mContentView.findViewById(R.id.group_owner);
         view.setText(R.string.empty);
-        view = (TextView) mContentView.findViewById(R.id.device_info);
-        view.setText(R.string.empty);
-        view = (TextView) mContentView.findViewById(R.id.group_owner);
-        view.setText(R.string.empty);
-        view = (TextView) mContentView.findViewById(R.id.status_text);
-        view.setText(R.string.empty);
+
         mContentView.findViewById(R.id.btn_start_client).setVisibility(View.GONE);
         this.getView().setVisibility(View.GONE);
     }
@@ -463,13 +499,13 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         }
 
 
-        private void processMessage(Message message, Socket client) {
+        private void processMessage(final Message message, Socket client) {
             PeerList peerList = PeerList.getInstance();
             if (message.getmMessageType().equals("Bonjour") && info.isGroupOwner) {
                 Log.d(WiFiDirectActivity.TAG, "Client IP address: " + client.getInetAddress());
                 Log.d(WiFiDirectActivity.TAG, "Client Name?: " + message.getmSenderDeviceName());
                 String device = message.getmSenderDeviceName();
-                String ipAddress = client.getInetAddress().toString().substring(1); // remove /
+                String ipAddress = client.getInetAddress().toString().replace("/",""); // remove /
                 peerList.addDevice(device, ipAddress);
                 sendUpdatedPeerList();
                 //save IP to GO Global IP LIST
@@ -496,7 +532,6 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
                 Log.d("PeerLIst Data After", peerList.getDevices().size() + "");
                 sendUpdatedPeerList();
             }
-            //Toast.makeText(context,"heloo", Toast.LENGTH_LONG).show();
 
             Log.i("Disconnect Message", "before message " + message.getmMessageType().toString());
             if (message.getmMessageType().equals("DisconnectPeer")) {
@@ -536,6 +571,37 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
 
             }
 
+            Log.i("Text Message", "before message " + message.getmMessageType().toString());
+            if (message.getmMessageType().equals("Text")) {
+                Log.i("Text Message", "inside process message");
+                String deviceName = (String) message.getmMesssageData();
+                final String content = (String) message.getmMesssageData();
+                Log.d(WiFiDirectActivity.TAG, "Text Message Received for " + deviceName );
+                Log.d(WiFiDirectActivity.TAG, "Text Context " +  content);
+                context.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Toast.makeText(context, "From " + message.getmSenderDeviceName() + ": "+ content, Toast.LENGTH_LONG).show();
+                    }
+                });
+
+            }
+            Log.i("Image Message", "before message " + message.getmMessageType().toString());
+            if (message.getmMessageType().equals("Image")) {
+                Log.i("Image Message", "inside process message");
+                final SerialBitmap serialBitmap = (SerialBitmap) message.getmMesssageData();
+
+
+                context.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        ImageView receivedImageView = (ImageView) mContentView.findViewById(R.id.receivedImageView);
+                        receivedImageView.setImageBitmap(serialBitmap.getBitmap());
+                    }
+                });
+
+            }
+
 
             createAsyncTask();
 
@@ -545,7 +611,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
             PeerList peerList = PeerList.getInstance();
             if (peerList.getDevices().size() > 0) {
                 // make sure GO is in peer list for easy access by anyone
-                peerList.addDevice(peerList.getMyPhoneName(), info.groupOwnerAddress.toString());
+                peerList.addDevice(peerList.getMyPhoneName(), info.groupOwnerAddress.toString().replace("/",""));
 
                 final HashMap<String, String> devices = peerList.getDevices();
                 final HashMap<String, String> updatedPeers = new HashMap<>();

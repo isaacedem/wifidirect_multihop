@@ -4,23 +4,11 @@
         "source": "/Users/keyurpatel/AndroidStudioProjects/wifidirect_multihop/app/src/main/res/drawable/machine.png"
     },
     {
-        "merged": "/Users/idorgbefu/AndroidStudioProjects/WiFiDirectDemo1/app/build/intermediates/res/merged/debug/drawable/section_header.xml",
-        "source": "/Users/idorgbefu/AndroidStudioProjects/WiFiDirectDemo1/app/src/main/res/drawable/section_header.xml"
-    },
-    {
-        "merged": "/Users/idorgbefu/AndroidStudioProjects/WiFiDirectDemo1/app/build/intermediates/res/merged/debug/drawable/machine.png",
-        "source": "/Users/idorgbefu/AndroidStudioProjects/WiFiDirectDemo1/app/src/main/res/drawable/machine.png"
-    },
-    {
         "merged": "/Users/keyurpatel/AndroidStudioProjects/wifidirect_multihop/app/build/intermediates/res/merged/debug/drawable/section_header.xml",
         "source": "/Users/keyurpatel/AndroidStudioProjects/wifidirect_multihop/app/src/main/res/drawable/section_header.xml"
     },
     {
         "merged": "/Users/keyurpatel/AndroidStudioProjects/wifidirect_multihop/app/build/intermediates/res/merged/debug/drawable/details_view.xml",
         "source": "/Users/keyurpatel/AndroidStudioProjects/wifidirect_multihop/app/src/main/res/drawable/details_view.xml"
-    },
-    {
-        "merged": "/Users/idorgbefu/AndroidStudioProjects/WiFiDirectDemo1/app/build/intermediates/res/merged/debug/drawable/details_view.xml",
-        "source": "/Users/idorgbefu/AndroidStudioProjects/WiFiDirectDemo1/app/src/main/res/drawable/details_view.xml"
     }
 ]

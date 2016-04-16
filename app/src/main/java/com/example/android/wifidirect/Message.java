@@ -16,6 +16,7 @@ public class Message implements Serializable{
      * PeerList
      * RemovePeer
      * DisconnectPeer
+     * Image
      */
     private String mMessageType;
     private Object mMesssageData;
