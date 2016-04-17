@@ -293,6 +293,7 @@ public class WiFiDirectActivity extends Activity implements ChannelListener, Dev
         final DeviceListFragment fragment = (DeviceListFragment) getFragmentManager()
                 .findFragmentById(R.id.frag_list);
         fragment.onInitiateDiscovery();
+        Log.i("help", "asdf");
         manager.discoverPeers(channel, new WifiP2pManager.ActionListener() {
 
             @Override

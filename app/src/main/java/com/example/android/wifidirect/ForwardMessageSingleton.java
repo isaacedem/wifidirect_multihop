@@ -30,6 +30,16 @@ public class ForwardMessageSingleton {
 
     private boolean doesMessageNeedToBeForwarded = false;
 
+    public boolean isForward() {
+        return forward;
+    }
+
+    public void setForward(boolean forward) {
+        this.forward = forward;
+    }
+
+    private boolean forward = false;
+
 
 
     public static ForwardMessageSingleton getInstance(){

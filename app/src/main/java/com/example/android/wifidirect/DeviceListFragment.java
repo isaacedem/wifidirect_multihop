@@ -74,7 +74,7 @@ public class DeviceListFragment extends ListFragment implements PeerListListener
 
     private static String getDeviceStatus(WifiP2pDevice device) {
         int deviceStatus = device.status;
-        Log.d(WiFiDirectActivity.TAG, "Device " + device.deviceName+ " Peer status :" + deviceStatus);
+       // Log.d(WiFiDirectActivity.TAG, "Device " + device.deviceName+ " Peer status :" + deviceStatus);
         switch (deviceStatus) {
             case WifiP2pDevice.AVAILABLE:
                 return "Available";
@@ -170,6 +170,7 @@ public class DeviceListFragment extends ListFragment implements PeerListListener
     public void onPeersAvailable(WifiP2pDeviceList peerList) {
         PeerList globalPeerList = PeerList.getInstance();
 
+        Log.i("help", "asdf on Peers Avail");
         if (progressDialog != null && progressDialog.isShowing()) {
             progressDialog.dismiss();
         }
@@ -216,7 +217,7 @@ public class DeviceListFragment extends ListFragment implements PeerListListener
         Message forwardedMessage = ForwardMessageSingleton.getInstance().getMessage();
         if(ForwardMessageSingleton.getInstance().isDoesMessageNeedToBeForwarded()){
             for (WifiP2pDevice peer2 : peers) {
-                Log.d("Forwarded Message", peer2.deviceName + " " + peer2.status+" status");
+                //Log.d("Forwarded Message", peer2.deviceName + " " + peer2.status+" status");
                 if(peer2.deviceName.equals(forwardedMessage.getmRecipientName())&& !(peer2.status == WifiP2pDevice.CONNECTED)){
                     //check device to make sure device is not connected to a group
                     //if connected to a group than do not connect and connect to another GO
@@ -234,7 +235,7 @@ public class DeviceListFragment extends ListFragment implements PeerListListener
                             "Connecting to :" + device.deviceAddress, true, true
                     );
                     ((DeviceActionListener) getActivity()).connect(config);
-//                    ForwardMessageSingleton.getInstance().setDoesMessageNeedToBeForwarded(false);
+                    ForwardMessageSingleton.getInstance().setDoesMessageNeedToBeForwarded(false);
 
 
 
@@ -256,6 +257,7 @@ public class DeviceListFragment extends ListFragment implements PeerListListener
         if (progressDialog != null && progressDialog.isShowing()) {
             progressDialog.dismiss();
         }
+        Log.i("help", "asdf on Init Dis");
         progressDialog = ProgressDialog.show(getActivity(), "Press back to cancel", "finding peers", true,
                 true, new DialogInterface.OnCancelListener() {
 
